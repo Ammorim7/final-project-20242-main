@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <cctype> // Para std::tolower
 using namespace std;
 
 // Classe Lista
@@ -58,16 +59,9 @@ public:
     string getTermo() const { return termo; }
     long getPeso() const { return peso; }
 
-    static int compararPeloPeso(Termo t1, Termo t2) {
-        return t2.peso - t1.peso; // Decrescente
-    }
-
-    static int compararPeloPrefixo(Termo t1, Termo t2, int r) {
-        string prefixo1 = t1.termo.substr(0, r);
-        string prefixo2 = t2.termo.substr(0, r);
-        if (prefixo1 > prefixo2) return 1;
-        if (prefixo1 < prefixo2) return -1;
-        return 0;
+    // Comparador para ordenar por peso (decrescente)
+    static bool compararPorPeso(const Termo& t1, const Termo& t2) {
+        return t1.peso > t2.peso;
     }
 
     bool operator<(const Termo& outro) const {
@@ -85,14 +79,21 @@ class Autocompletar {
 private:
     ListaOrdenada<Termo> termos;
 
-    int buscaBinaria(const string& prefixo, int r) {
+    // Função auxiliar para busca binária
+    int buscaBinaria(const string& prefixo) {
         int inicio = 0, fim = termos.tamanho() - 1;
         while (inicio <= fim) {
             int meio = (inicio + fim) / 2;
-            string termoAtual = termos[meio].getTermo().substr(0, r);
-            if (termoAtual < prefixo)
+            string termoAtual = termos[meio].getTermo().substr(0, prefixo.size());
+
+            // Comparar ignorando maiúsculas/minúsculas
+            transform(termoAtual.begin(), termoAtual.end(), termoAtual.begin(), ::tolower);
+            string prefixoLower = prefixo;
+            transform(prefixoLower.begin(), prefixoLower.end(), prefixoLower.begin(), ::tolower);
+
+            if (termoAtual < prefixoLower)
                 inicio = meio + 1;
-            else if (termoAtual > prefixo)
+            else if (termoAtual > prefixoLower)
                 fim = meio - 1;
             else
                 return meio;
@@ -103,23 +104,26 @@ private:
 public:
     void carregarTermos(const string& arquivo) {
         ifstream inFile(arquivo);
-        string linha, termo;
-        long peso;
+        string linha;
 
         while (getline(inFile, linha)) {
-            linha.erase(0, linha.find_first_not_of(" \t"));
-            linha.erase(linha.find_last_not_of(" \t") + 1);
+            linha.erase(0, linha.find_first_not_of(" \t")); // Remover espaços no início
+            linha.erase(linha.find_last_not_of(" \t") + 1); // Remover espaços no final
 
             if (linha.empty()) continue;
 
             size_t tabPos = linha.find('\t');
             if (tabPos == string::npos) continue;
 
-            peso = stol(linha.substr(0, tabPos));
-            termo = linha.substr(tabPos + 1);
+            try {
+                long peso = stol(linha.substr(0, tabPos));
+                string termo = linha.substr(tabPos + 1);
 
-            if (!termo.empty()) {
-                termos.inserir(Termo(termo, peso));
+                if (!termo.empty()) {
+                    termos.inserir(Termo(termo, peso));
+                }
+            } catch (const exception& e) {
+                continue; // Ignorar linhas inválidas
             }
         }
 
@@ -127,28 +131,40 @@ public:
     }
 
     vector<Termo> procurar(const string& prefixo, int k) {
-        int r = prefixo.size();
-        int indice = buscaBinaria(prefixo, r);
+        int indice = buscaBinaria(prefixo);
         if (indice == -1) return {};
 
         vector<Termo> resultados;
+        int r = prefixo.size();
+
+        // Coletar termos correspondentes
         for (int i = indice; i < termos.tamanho(); ++i) {
-            if (termos[i].getTermo().substr(0, r) == prefixo)
+            string termoAtual = termos[i].getTermo().substr(0, r);
+            transform(termoAtual.begin(), termoAtual.end(), termoAtual.begin(), ::tolower);
+            string prefixoLower = prefixo;
+            transform(prefixoLower.begin(), prefixoLower.end(), prefixoLower.begin(), ::tolower);
+
+            if (termoAtual == prefixoLower)
                 resultados.push_back(termos[i]);
             else
                 break;
         }
 
-        sort(resultados.begin(), resultados.end(),
-             [](const Termo& t1, const Termo& t2) { return t2.getPeso() - t1.getPeso(); });
+        // Ordenar por peso (decrescente)
+        sort(resultados.begin(), resultados.end(), Termo::compararPorPeso);
 
-        if (resultados.size() > k) resultados.resize(k);
+        if ((int)resultados.size() > k) resultados.resize(k);
         return resultados;
     }
 };
 
 // Função principal
 int main(int argc, char* argv[]) {
+    if (argc < 3) {
+        cerr << "Uso: " << argv[0] << " <arquivo> <k>\n";
+        return 1;
+    }
+
     string arquivo = argv[1];
     int k = stoi(argv[2]);
 
