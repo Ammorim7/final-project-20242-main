@@ -104,7 +104,7 @@ public:
         string linha;
 
         while (getline(inFile, linha)) {
-            linha.erase(0, linha.find_first_not_of(" \t")); // Remover espaços no início
+            linha.erase(0, linha.find_first_not_of(" \t"));
             linha.erase(linha.find_last_not_of(" \t") + 1);
 
             if (linha.empty()) continue;
@@ -120,7 +120,7 @@ public:
                     termos.inserir(Termo(termo, peso));
                 }
             } catch (const exception& e) {
-                continue; // Ignorar linhas inválidas
+                continue;
             }
         }
 
