@@ -4,7 +4,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-#include <cctype> // Para std::tolower
+#include <cctype> 
 using namespace std;
 
 // Classe Lista
@@ -59,7 +59,6 @@ public:
     string getTermo() const { return termo; }
     long getPeso() const { return peso; }
 
-    // Comparador para ordenar por peso (decrescente)
     static bool compararPorPeso(const Termo& t1, const Termo& t2) {
         return t1.peso > t2.peso;
     }
@@ -79,14 +78,12 @@ class Autocompletar {
 private:
     ListaOrdenada<Termo> termos;
 
-    // Função auxiliar para busca binária
     int buscaBinaria(const string& prefixo) {
         int inicio = 0, fim = termos.tamanho() - 1;
         while (inicio <= fim) {
             int meio = (inicio + fim) / 2;
             string termoAtual = termos[meio].getTermo().substr(0, prefixo.size());
 
-            // Comparar ignorando maiúsculas/minúsculas
             transform(termoAtual.begin(), termoAtual.end(), termoAtual.begin(), ::tolower);
             string prefixoLower = prefixo;
             transform(prefixoLower.begin(), prefixoLower.end(), prefixoLower.begin(), ::tolower);
@@ -108,7 +105,7 @@ public:
 
         while (getline(inFile, linha)) {
             linha.erase(0, linha.find_first_not_of(" \t")); // Remover espaços no início
-            linha.erase(linha.find_last_not_of(" \t") + 1); // Remover espaços no final
+            linha.erase(linha.find_last_not_of(" \t") + 1);
 
             if (linha.empty()) continue;
 
@@ -137,7 +134,6 @@ public:
         vector<Termo> resultados;
         int r = prefixo.size();
 
-        // Coletar termos correspondentes
         for (int i = indice; i < termos.tamanho(); ++i) {
             string termoAtual = termos[i].getTermo().substr(0, r);
             transform(termoAtual.begin(), termoAtual.end(), termoAtual.begin(), ::tolower);
@@ -150,7 +146,6 @@ public:
                 break;
         }
 
-        // Ordenar por peso (decrescente)
         sort(resultados.begin(), resultados.end(), Termo::compararPorPeso);
 
         if ((int)resultados.size() > k) resultados.resize(k);
